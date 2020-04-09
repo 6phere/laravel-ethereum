@@ -39,7 +39,7 @@ class EthereumServiceProvider extends ServiceProvider
     public function register()
     {
         $this->app->singleton(Ethereum::class, function ($app) {
-            return $this->createInstance($app['config']);
+            return $this->createInstance(collect(config('ethereum')));
         });
     }
 
@@ -48,23 +48,23 @@ class EthereumServiceProvider extends ServiceProvider
         return [Ethereum::class];
     }
 
-    protected function createInstance(Repository $config)
+    protected function createInstance($config)
     {
         // Check for ethereum config file.
-        if (! $this->hasConfigSection()) {
+        if (! $this->hasConfigSection($config)) {
             $this->raiseRunTimeException('Missing ethereum configuration section.');
         }
         // Check for username.
-        if ($this->configHasNo('host')) {
+        if ($this->configHasNo($config, 'host')) {
             $this->raiseRunTimeException('Missing ethereum configuration: "host".');
         }
         // check the password
-        if ($this->configHasNo('port')) {
+        if ($this->configHasNo($config, 'port')) {
             $this->raiseRunTimeException('Missing ethereum configuration: "port".');
         }
 
 
-        return new Ethereum($config->get('ethereum.host'), $config->get('ethereum.port'));
+        return new Ethereum($config->get('host'), $config->get('port'));
 
     }
 
@@ -73,10 +73,9 @@ class EthereumServiceProvider extends ServiceProvider
      *
      * @return bool
      */
-    protected function hasConfigSection()
+    protected function hasConfigSection($config)
     {
-        return $this->app->make(Repository::class)
-            ->has('ethereum');
+        return $config->count() > 0;
     }
 
     /**
@@ -87,9 +86,9 @@ class EthereumServiceProvider extends ServiceProvider
      *
      * @return bool
      */
-    protected function configHasNo($key)
+    protected function configHasNo($config, $key)
     {
-        return ! $this->configHas($key);
+        return ! $this->configHas($config, $key);
     }
 
     /**
@@ -100,18 +99,12 @@ class EthereumServiceProvider extends ServiceProvider
      *
      * @return bool
      */
-    protected function configHas($key)
+    protected function configHas($config, $key)
     {
-        /** @var Config $config */
-        $config = $this->app->make(Repository::class);
-        // Check for ethereum config file.
-        if (! $config->has('ethereum')) {
-            return false;
-        }
         return
-            $config->has('ethereum.'.$key) &&
-            ! is_null($config->get('ethereum.'.$key)) &&
-            ! empty($config->get('ethereum.'.$key));
+            $config->has($key) &&
+            ! is_null($config->get($key)) &&
+            ! empty($config->get($key));
     }
 
     /**
